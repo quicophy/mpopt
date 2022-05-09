@@ -4,6 +4,7 @@ This module contains relevant utilities.
 
 import numpy as np
 from opt_einsum import contract
+import pytaco as pt
 
 
 def svd(mat, cut=1e-14, chi_max=1e5, renormalise=False):
@@ -357,3 +358,35 @@ def mpo_from_matrix(matrix, num_sites, interlaced=True, phys_dim=2, chi_max=1e5)
         for tensor in mpo
     ]
     return mpo
+
+def numpy_dense_to_pytaco_sparse(A, rel_cutoff=1e-6, abs_cutoff=1e-12, dtype=None):
+    """
+    Create a sparse pytaco tensor from a numpy dense tensor.
+    Also remove tensor components below abs_cutoff and below rel_cutoff time
+    the highest tensor component in absolute value.
+    Removal of small component is carried on the input tensor
+    Tensor structure is reallocated.
+    """
+    if isinstance(A, pt.tensor): 
+        print("Tensor is already a pytaco tensor")
+        return A
+    # TODO: it copy full array to remove after the 0, maybe I can make something smarter
+    #zero small components
+    #rel
+    A[np.abs(A) < rel_cutoff * np.max(A)] = 0
+    #abs
+    A[A < abs_cutoff] = 0
+    #conversion
+    A_ = pt.from_array(A)
+    #retrieve desired precision
+    if dtype == "double":
+        dtype = pt.float64
+    elif dtype == "float":
+        dtype = pt.float32
+    #remove explicit 0
+    A_ = pt.remove_explicit_zeros(
+        A_,
+        [pt.compressed for _ in A.shape],
+        dtype
+    ) 
+    return A_
