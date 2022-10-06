@@ -378,6 +378,7 @@ def apply_parity_constraints(
     strings: list[list[list[np.int16]]],
     logical_tensors: list[np.ndarray],
     chi_max: np.int16 = 1e4,
+    tolerance: np.float64 = 1e-6,
     renormalise: bool = False,
     strategy: str = "naive",
     silent: bool = False,
@@ -392,8 +393,10 @@ def apply_parity_constraints(
             The list of arguments for :class:`ConstraintString`.
         logical_tensors
             List of logical tensors for :class:`ConstraintString`.
-        chi_max :
+        tolerance :
             Maximum bond dimension to keep in the contractor.
+        tolerance :
+            Truncate bond dimension up to the given tolerance.
         renormalise :
             To (not) renormalise the singular values at each MPS bond involved in contraction.
         strategy :
@@ -409,7 +412,6 @@ def apply_parity_constraints(
     if strategy == "naive":
 
         for string in tqdm(strings, disable=silent):
-
             # Preparing the MPO.
             string = ConstraintString(logical_tensors, string)
             mpo = string.get_mpo()
@@ -459,6 +461,7 @@ def apply_parity_constraints(
                 start_site,
                 renormalise=renormalise,
                 chi_max=chi_max,
+                cut=tolerance,
                 inplace=False,
             )
 
@@ -639,7 +642,7 @@ if __name__ == "__main__":
     print("")
 
     # Defining the parameters of a classical LDPC code.
-    NUM_BITS, NUM_CHECKS = 24, 18
+    NUM_BITS, NUM_CHECKS = 32, 24
     CHECK_DEGREE, BIT_DEGREE = 4, 3
     if NUM_BITS / NUM_CHECKS != CHECK_DEGREE / BIT_DEGREE:
         raise ValueError("The Tanner graph of the code must be bipartite.")
@@ -693,6 +696,7 @@ if __name__ == "__main__":
         code_constraint_sites,
         tensors,
         chi_max=CHI_MAX_CONTRACTOR,
+        tolerance=1.3e-4,
         renormalise=True,
         strategy="naive",
         silent=False,

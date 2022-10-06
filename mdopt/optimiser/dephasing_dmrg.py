@@ -205,7 +205,7 @@ class DephasingDMRG:
         mps: Union[ExplicitMPS, CanonicalMPS],
         mps_target: Union[ExplicitMPS, CanonicalMPS],
         chi_max: np.int16 = 1e4,
-        cut: np.float64 = 1e-12,
+        cut: np.float64 = 1e-6,
         mode: str = "SA",
         silent: bool = False,
         copy: bool = True,

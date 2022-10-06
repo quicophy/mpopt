@@ -155,8 +155,7 @@ class DMRG:
             | ``LA`` : Largest (algebraic) eigenvalues.
             | ``SA`` : Smallest (algebraic) eigenvalues.
     cut :
-        The lower boundary of the spectrum, i.e., all the
-        singular values smaller than that will be discarded.
+        Truncation tolerance for tensor approximation
     silent :
         Whether to show/hide the progress bar.
     """
@@ -166,7 +165,7 @@ class DMRG:
         mps: Union[ExplicitMPS, CanonicalMPS],
         mpo: list[np.ndarray],
         chi_max: np.int16 = 1e4,
-        cut: np.float64 = 1e-12,
+        cut: np.float64 = 1e-6,
         mode: str = "SA",
         silent: bool = False,
         copy: bool = True,

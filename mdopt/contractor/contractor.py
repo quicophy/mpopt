@@ -70,7 +70,7 @@ def apply_two_site_unitary(
     b_2: np.ndarray,
     unitary: np.ndarray,
     chi_max: np.int16 = 1e4,
-    cut: np.float64 = 1e-12,
+    cut: np.float64 = 1e-6,
 ) -> tuple[np.ndarray]:
     """
     Applies a two-site unitary operator to a right-canonical MPS as follows::
@@ -100,7 +100,7 @@ def apply_two_site_unitary(
     unitary : np.ndarray
         The unitary tensor we apply.
     cut: np.float64
-        Singular values smaller than this will be discarded.
+        Truncation tolerance for the SVD
     chi_max: np.int16
         Maximum number of singular values to keep.
 
@@ -169,7 +169,7 @@ def mps_mpo_contract(
     start_site: np.int16 = 0,
     renormalise: bool = False,
     chi_max: np.int64 = 1e4,
-    cut: np.float64 = 1e-12,
+    cut: np.float64 = 1e-6,
     inplace: bool = False,
 ) -> CanonicalMPS:
     """
@@ -211,8 +211,8 @@ def mps_mpo_contract(
         involving two neigbouring MPS sites.
     chi_max : np.int16
         Maximum bond dimension to keep.
-    cut : np.float64
-        Cutoff for the singular values.
+    cut: np.float64
+        Truncation tolerance for the SVD
     inplace : bool
         Whether to modify the starting MPS or create a new one.
 
@@ -268,7 +268,6 @@ def mps_mpo_contract(
             mps.tensors[start_site + 1].shape[2] * mpo[1].shape[1],
         )
     )
-
     for i in range(len(mpo) - 2):
 
         mps.tensors[orth_centre_index], singular_values, b_r = split_two_site_tensor(

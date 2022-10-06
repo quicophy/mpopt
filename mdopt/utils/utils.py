@@ -7,7 +7,7 @@ from opt_einsum import contract
 
 def svd(
     mat: np.ndarray,
-    cut: np.float64 = 1e-12,
+    cut: np.float64 = 1e-6,
     chi_max: np.int16 = 1e4,
     renormalise: bool = False,
 ) -> tuple[np.ndarray]:
@@ -18,8 +18,8 @@ def svd(
     ----------
     mat : np.ndarray
         Matrix provided as a tensor with 2 dimensions.
-    cut : np.float64
-        Singular values smaller than this will be discarded.
+    cut : float
+        Truncation tolerance for the SVD
     chi_max : np.int16
         Maximum number of singular values to keep.
     renormalise : bool
@@ -44,24 +44,39 @@ def svd(
         raise ValueError(
             f"A valid matrix must have 2 dimensions while the one given has {len(mat.shape)}."
         )
+
     try:
+        #this use lapack routine gesdd (quicker but may not converge)
         u_l, singular_values, v_r = np.linalg.svd(
             mat, full_matrices=False, compute_uv=True, hermitian=False
         )
-    except np.linalg.LinAlgError:
+    except:
+        #Use lapack routine gesvd (slower but more stable)
         u_l, singular_values, v_r = scipy.linalg.svd(
-            mat, full_matrices=False, compute_uv=True, lapack_driver="gesvd"
+-           mat, full_matrices=False, compute_uv=True, lapack_driver="gesvd"
         )
-
-    max_num = min(chi_max, np.sum(singular_values > cut))
-    ind = np.argsort(singular_values)[::-1][:max_num]
-
-    u_l, singular_values, v_r = u_l[:, ind], singular_values[ind], v_r[ind, :]
+    mat_norm2 = np.sum(singular_values**2)
+    approx_norm2 = np.cumsum(singular_values**2)
+    i = np.sum(approx_norm2 <= mat_norm2*(1-cut)**2)
+    if i+1 < chi_max:
+        u_l, singular_values, v_r = u_l[:, 0:i+1], singular_values[:i+1], v_r[0:i+1]
+    elif chi_max < len(singular_values):
+        u_l, singular_values, v_r = u_l[:, 0:chi_max], singular_values[:chi_max], v_r[0:chi_max]
 
     if renormalise:
         singular_values /= np.linalg.norm(singular_values)
 
     return u_l, singular_values, v_r
+
+
+def create_sparse_matrix(mat, cutoff=1e-10, f="csr"):
+    mat_max = 1/np.max(mat)
+    i,j = np.argwhere(abs(mat_max * mat) > cutoff).transpose()
+    if f == "csr":
+        mat_sparse = scipy.sparse.csr_array((mat[i,j], (i,j)), shape=mat.shape)
+    if f == "csc":
+        mat_sparse = scipy.sparse.csc_array((mat[i,j], (i,j)), shape=mat.shape)
+    return mat_sparse
 
 
 def kron_tensors(
@@ -146,7 +161,7 @@ def kron_tensors(
 def split_two_site_tensor(
     tensor: np.ndarray,
     chi_max: np.int16 = 1e4,
-    cut: np.float64 = 1e-12,
+    cut: np.float64 = 1e-6,
     renormalise: bool = False,
 ) -> tuple:
     """
@@ -162,8 +177,9 @@ def split_two_site_tensor(
         Two-site tensor ``(i, j, k, l)``.
     chi_max : np.int16
         Maximum number of singular values to keep.
-    eps : np.float64
-        Discard any singular values smaller than eps.
+    cut : np.float64
+        Truncation tolerance for tensor splitting, i.e. find the rank k such as:
+        || tensor - Ak * diag(Sk) * Bk || < cut
 
     Returns
     -------
